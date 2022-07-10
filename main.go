@@ -91,8 +91,8 @@ func main() {
 		ServiceName:           cfg.Application.Name,
 		Logger:                logger,
 		DepositTopicPublisher: depositTopicPublisher,
-		RollingPeriod:         180,
-		Threshold:             10000,
+		RollingPeriod:         cfg.Wallet.RollingPeriod,
+		Threshold:             cfg.Wallet.Threshold,
 		BalanceViewTable:      balanceVt,
 		ThresholdViewTable:    thresholdVt,
 	})
