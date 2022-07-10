@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package model;
+option go_package = "./;model";
+
+message DepositWallet {
+    string wallet_id = 1;
+    double amount = 2;
+}
