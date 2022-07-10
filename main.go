@@ -32,17 +32,20 @@ import (
 )
 
 var (
-	tracer       *apm.Tracer
-	cfg          *config.Config
-	location     *time.Location
-	tmc          *goka.TopicManagerConfig
-	depositTopic string = "deposits"
-	indexMessage string = "Application is running properly"
+	tracer         *apm.Tracer
+	cfg            *config.Config
+	location       *time.Location
+	tmc            *goka.TopicManagerConfig
+	depositTopic   string = "deposits"
+	balanceGroup   string = "balance"
+	thresholdGroup string = "aboveThreshold"
+	indexMessage   string = "Application is running properly"
 )
 
 func init() {
 	tracer = apm.DefaultTracer
 	tmc = goka.NewTopicManagerConfig()
+	// if multiple broker we can configure above 1
 	tmc.Table.Replication = 1
 	tmc.Stream.Replication = 1
 	cfg = config.Load()
@@ -80,12 +83,20 @@ func main() {
 	thresholdCodec := wallet.NewThresholdCodec()
 
 	// init view table
-	balanceVt := pubsub.NewGokaViewTableAdapter(logger, "balance", cfg.SaramaKafka.Addresses, walletCodec)
-	thresholdVt := pubsub.NewGokaViewTableAdapter(logger, "aboveThreshold", cfg.SaramaKafka.Addresses, thresholdCodec)
+	balanceVt, err := pubsub.NewGokaViewTableAdapter(logger, balanceGroup, cfg.SaramaKafka.Addresses, walletCodec)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	thresholdVt, err := pubsub.NewGokaViewTableAdapter(logger, thresholdGroup, cfg.SaramaKafka.Addresses, thresholdCodec)
+	if err != nil {
+		logger.Fatal(err)
+	}
 
 	// init publisher
-	depositTopicPublisher := pubsub.NewGokaProducerAdapter(logger, cfg.SaramaKafka.Addresses, depositTopic, depositWalletCodec)
-
+	depositTopicPublisher, err := pubsub.NewGokaProducerAdapter(logger, cfg.SaramaKafka.Addresses, depositTopic, depositWalletCodec)
+	if err != nil {
+		logger.Fatal(err)
+	}
 	// init domain object
 	walletUsecase := wallet.NewWalletUsecase(wallet.UsecaseProperty{
 		ServiceName:           cfg.Application.Name,
@@ -102,14 +113,14 @@ func main() {
 	processThresholdEventHandler := wallet.NewProcessThresholdEventHandler(logger, walletUsecase)
 
 	depositWalletBalanceGroup, err := pubsub.NewGokaConsumerGroupFullConfigAdapter(logger, cfg.SaramaKafka.Addresses,
-		"balance", depositTopic, depositWalletEventHandler, tmc, depositWalletCodec, walletCodec)
+		balanceGroup, depositTopic, depositWalletEventHandler, tmc, depositWalletCodec, walletCodec)
 
 	if err != nil {
 		logger.Fatal(err)
 	}
 
 	processThresholdGroup, err := pubsub.NewGokaConsumerGroupFullConfigAdapter(logger, cfg.SaramaKafka.Addresses,
-		"aboveThreshold", depositTopic, processThresholdEventHandler, tmc, depositWalletCodec, thresholdCodec)
+		thresholdGroup, depositTopic, processThresholdEventHandler, tmc, depositWalletCodec, thresholdCodec)
 
 	if err != nil {
 		logger.Fatal(err)
