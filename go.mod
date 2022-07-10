@@ -17,7 +17,7 @@ require (
 	github.com/lovoo/goka v1.1.6
 	github.com/onsi/gomega v1.15.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	go.elastic.co/apm v1.13.1
 	go.elastic.co/apm/module/apmlogrus v1.13.1
 	go.elastic.co/apm/module/apmsql v1.13.1
