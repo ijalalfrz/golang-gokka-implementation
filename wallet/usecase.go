@@ -23,6 +23,7 @@ const (
 	processThresholdSuccessMessage = "Balance threshold for wallet: %s has been processed, current above threshold status: %t"
 	detailUnexpectedErrMessage     = "Unexpected error while getting wallet details"
 	detailSuccessMessage           = "Detail wallet"
+	detailNotfoundErrMessage       = "Wallet is not found"
 )
 
 // Usecase is a collection of behavior of wallet.
@@ -132,7 +133,9 @@ func (u walletUsecase) GetDetail(ctx context.Context, walletId string) (resp res
 		u.logger.Error(err)
 		return response.NewErrorResponse(err, http.StatusInternalServerError, nil, response.StatUnexpectedError, detailUnexpectedErrMessage)
 	}
-
+	if balanceData == nil || thresholdData == nil {
+		return response.NewErrorResponse(err, http.StatusNotFound, nil, response.StatNotFound, detailNotfoundErrMessage)
+	}
 	balance := balanceData.(*entity.Wallet)
 	threshold := thresholdData.(*entity.Threshold)
 	detail := webmodel.DetailWalletResponse{
