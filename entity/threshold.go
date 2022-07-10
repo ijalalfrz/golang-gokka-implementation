@@ -1,5 +1,6 @@
 package entity
 
+// Threshold is an entitiy to record deposit and check threshold
 type Threshold struct {
 	WalletId                 string  `json:"wallet_id"`
 	Deposit                  float64 `json:"deposit"`
