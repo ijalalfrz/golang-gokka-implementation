@@ -9,9 +9,9 @@ import (
 
 // GokaViewTableAdapter is a concrete struct of goka group table adapter.
 type GokaViewTableAdapter struct {
-	logger    *logrus.Logger
-	view      *goka.View
-	closeChan chan struct{}
+	logger *logrus.Logger
+	view   *goka.View
+	cancel context.CancelFunc
 }
 
 // NewGokaViewTableAdapter will create goka view
@@ -20,12 +20,10 @@ func NewGokaViewTableAdapter(logger *logrus.Logger, group string, brokers []stri
 	if err != nil {
 		return
 	}
-	closeChan := make(chan struct{}, 1)
 
 	view = &GokaViewTableAdapter{
-		logger:    logger,
-		view:      v,
-		closeChan: closeChan,
+		logger: logger,
+		view:   v,
 	}
 
 	return
@@ -34,22 +32,16 @@ func NewGokaViewTableAdapter(logger *logrus.Logger, group string, brokers []stri
 // Open will run the view on new goroutine
 func (gk *GokaViewTableAdapter) Open() {
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		for {
-			select {
-			case <-gk.closeChan:
-				cancel()
-			default:
-				if gk.view.CurrentState() != goka.ViewStateRunning {
-					if err := gk.view.Run(ctx); err != nil {
-						gk.logger.Errorf("Error running view: %v", err)
-					}
-				}
+	go func(ctx context.Context) {
+		if gk.view.CurrentState() != goka.ViewStateRunning {
+			if err := gk.view.Run(ctx); err != nil {
+				gk.logger.Errorf("Error running view: %v", err)
 			}
 		}
-	}()
-
+	}(ctx)
+	gk.cancel = cancel
 	return
+
 }
 
 // Get will return data from group table based on key
@@ -60,8 +52,7 @@ func (gk *GokaViewTableAdapter) Get(key string) (data interface{}, err error) {
 
 // Close will end goroutine for view
 func (gk *GokaViewTableAdapter) Close() {
-	defer close(gk.closeChan)
-
+	gk.cancel()
 	gk.logger.Info("[Goka] View Table is gracefully shut down.")
 	return
 }
