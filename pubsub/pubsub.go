@@ -11,6 +11,7 @@ type EventHandler interface {
 	Handle(ctx context.Context, message interface{}) (err error)
 }
 
+//  GokaEventHandler is an event handler for goka context. It will be called after message is arrived to consumer
 type GokaEventHandler interface {
 	Handle(ctx goka.Context, message interface{})
 }
@@ -33,4 +34,14 @@ type ViewTable interface {
 	Open()
 	Get(key string) (data interface{}, err error)
 	Close()
+}
+
+// GokaCodec is a collection of behavior of goka codec
+type GokaCodec interface {
+	Encode(value interface{}) ([]byte, error)
+	Decode(data []byte) (interface{}, error)
+}
+
+type GokaContext interface {
+	goka.Context
 }

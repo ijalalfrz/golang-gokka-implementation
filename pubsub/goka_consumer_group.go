@@ -7,16 +7,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type GokaCodec interface {
-	Encode(value interface{}) ([]byte, error)
-	Decode(data []byte) (interface{}, error)
-}
 type GokaConsumserGroupAdapter struct {
 	logger    *logrus.Logger
 	processor *goka.Processor
-	closeChan chan struct{}
 }
 
+// NewGokaConsumerGroupFullConfigAdapter will create consumer group and group table
 func NewGokaConsumerGroupFullConfigAdapter(
 	logger *logrus.Logger, addresses []string, groupID string, topic string, handler GokaEventHandler,
 	topicManagerConfig *goka.TopicManagerConfig, inputCodec GokaCodec, tableCodec GokaCodec,
@@ -31,14 +27,11 @@ func NewGokaConsumerGroupFullConfigAdapter(
 		goka.WithConsumerGroupBuilder(goka.DefaultConsumerGroupBuilder),
 	)
 	if err != nil {
-		logger.Fatal(err)
+		return
 	}
-	closeChan := make(chan struct{}, 1)
-
 	subscriber = &GokaConsumserGroupAdapter{
 		logger:    logger,
 		processor: p,
-		closeChan: closeChan,
 	}
 
 	return
@@ -46,17 +39,10 @@ func NewGokaConsumerGroupFullConfigAdapter(
 
 // Subscribe will consume the published message
 func (gk *GokaConsumserGroupAdapter) Subscribe() {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	go func() {
-		select {
-		case <-gk.closeChan:
-			cancel()
-		default:
-			if err := gk.processor.Run(ctx); err != nil {
-				gk.logger.Errorf("Error running processor: %v", err)
-			} else {
-				gk.logger.Info("Processor shutdown grafully")
-			}
+		if err := gk.processor.Run(ctx); err != nil {
+			gk.logger.Errorf("Error running processor: %v", err)
 		}
 	}()
 
@@ -65,12 +51,7 @@ func (gk *GokaConsumserGroupAdapter) Subscribe() {
 
 // Close will stop the kafka consumer
 func (gk *GokaConsumserGroupAdapter) Close() (err error) {
-	defer close(gk.closeChan)
-
-	gk.closeChan <- struct{}{}
-
 	gk.processor.Stop()
-
 	gk.logger.Info("[Goka] Consumer is gracefully shut down.")
 	return
 }

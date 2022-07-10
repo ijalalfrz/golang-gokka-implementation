@@ -13,18 +13,20 @@ type GokaProducerAdapter struct {
 	emitter *goka.Emitter
 }
 
-func NewGokaProducerAdapter(logger *logrus.Logger, brokers []string, topic string, codec GokaCodec) Publisher {
+// NewGokaProducerAdapter will create producer for produce message to kafka
+func NewGokaProducerAdapter(logger *logrus.Logger, brokers []string, topic string, codec GokaCodec) (publisher Publisher, err error) {
 	emitter, err := goka.NewEmitter(brokers, goka.Stream(topic), codec)
 	if err != nil {
-		logger.Fatal(err)
+		return
 	}
-	publisher := &GokaProducerAdapter{
+	publisher = &GokaProducerAdapter{
 		logger:  logger,
 		emitter: emitter,
 	}
-	return publisher
+	return
 }
 
+// Close will close the producer
 func (gk *GokaProducerAdapter) Close() (err error) {
 	err = gk.emitter.Finish()
 	if err == nil {
@@ -33,6 +35,7 @@ func (gk *GokaProducerAdapter) Close() (err error) {
 	return
 }
 
+// Send will send kafka message
 func (gk *GokaProducerAdapter) Send(ctx context.Context, key string, message interface{}) (err error) {
 	err = gk.emitter.EmitSync(key, message)
 	return
