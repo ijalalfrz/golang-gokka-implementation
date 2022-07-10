@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ijalalfrz/coinbit-test/entity"
+	"github.com/ijalalfrz/coinbit-test/exception"
 	"github.com/ijalalfrz/coinbit-test/model"
 	"github.com/ijalalfrz/coinbit-test/pubsub"
 	"github.com/ijalalfrz/coinbit-test/response"
@@ -56,7 +57,7 @@ func NewWalletUsecase(property UsecaseProperty) Usecase {
 	}
 }
 
-// Deposit is a method for add balance to wallet
+// Deposit is a method for request add balance to wallet
 func (u walletUsecase) Deposit(ctx context.Context, payload webmodel.DepositWalletPayload) (resp response.Response) {
 	var deposit = &model.DepositWallet{
 		WalletId: payload.WalletId,
@@ -72,6 +73,7 @@ func (u walletUsecase) Deposit(ctx context.Context, payload webmodel.DepositWall
 	return response.NewSuccessResponse(nil, response.StatOK, depositSuccessMessage)
 }
 
+// AddBalance is a method for add balance to wallet
 func (u walletUsecase) AddBalance(ctx goka.Context, payload *model.DepositWallet) (resp response.Response) {
 	var wallet *entity.Wallet
 	if val := ctx.Value(); val != nil {
@@ -83,10 +85,11 @@ func (u walletUsecase) AddBalance(ctx goka.Context, payload *model.DepositWallet
 	wallet.Balance += payload.GetAmount()
 	wallet.WalletId = payload.GetWalletId()
 	ctx.SetValue(wallet)
-	return response.NewSuccessResponse(nil, response.StatOK, fmt.Sprintf(addBalanceSuccessMessage, wallet.WalletId, wallet.Balance))
+	return response.NewSuccessResponse(wallet, response.StatOK, fmt.Sprintf(addBalanceSuccessMessage, wallet.WalletId, wallet.Balance))
 
 }
 
+// ProcessThreshold is a method for processing deposit threshold on rolling period
 func (u walletUsecase) ProcessThreshold(ctx goka.Context, payload *model.DepositWallet) (resp response.Response) {
 	var threshold *entity.Threshold
 	if val := ctx.Value(); val != nil {
@@ -102,10 +105,14 @@ func (u walletUsecase) ProcessThreshold(ctx goka.Context, payload *model.Deposit
 	threshold.TotalDepositWithinWindow += payload.Amount
 	threshold.CreatedTime = now
 
+	// get difference time between time when roliing period started and current deposit time
 	timeNow := time.Unix(0, now)
 	timeStartRollingPeriod := time.Unix(0, threshold.StartWindowTime)
 	diff := timeNow.Sub(timeStartRollingPeriod)
+
+	// check if still in rolling period
 	if diff.Seconds() > float64(u.rollingPeriod) {
+		// Reset rolling period time to current time
 		threshold.AboveThreshold = false
 		threshold.StartWindowTime = now
 		threshold.TotalDepositWithinWindow = payload.Amount
@@ -117,7 +124,7 @@ func (u walletUsecase) ProcessThreshold(ctx goka.Context, payload *model.Deposit
 		}
 	}
 	ctx.SetValue(threshold)
-	return response.NewSuccessResponse(nil, response.StatOK, fmt.Sprintf(processThresholdSuccessMessage, threshold.WalletId, threshold.AboveThreshold))
+	return response.NewSuccessResponse(threshold, response.StatOK, fmt.Sprintf(processThresholdSuccessMessage, threshold.WalletId, threshold.AboveThreshold))
 
 }
 
@@ -134,6 +141,7 @@ func (u walletUsecase) GetDetail(ctx context.Context, walletId string) (resp res
 		return response.NewErrorResponse(err, http.StatusInternalServerError, nil, response.StatUnexpectedError, detailUnexpectedErrMessage)
 	}
 	if balanceData == nil || thresholdData == nil {
+		err = exception.ErrNotFound
 		return response.NewErrorResponse(err, http.StatusNotFound, nil, response.StatNotFound, detailNotfoundErrMessage)
 	}
 	balance := balanceData.(*entity.Wallet)

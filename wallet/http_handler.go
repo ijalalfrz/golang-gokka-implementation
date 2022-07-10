@@ -47,6 +47,7 @@ func (handler HTTPHandler) GetDetailWallet(w http.ResponseWriter, r *http.Reques
 	return
 }
 
+// DepositWallet is a function to handle deposit request
 func (handler HTTPHandler) DepositWallet(w http.ResponseWriter, r *http.Request) {
 	var resp response.Response
 	var payload webmodel.DepositWalletPayload
