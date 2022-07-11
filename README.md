@@ -19,11 +19,11 @@ Say what the step will be
 ```
 APP_NAME=wallet-service
 PORT=9000
-ROLLING_PERIOD=180
+ROLLING_PERIOD=120
 THRESHOLD=10000
 KAFKA_BROKERS=localhost:9092
 ```
-ROLLING_PERIOD is rolling period for deposit wallet in second unit (180 = 2 minutes)\
+ROLLING_PERIOD is rolling period for deposit wallet in second unit (120 = 2 minutes)\
 THRESHOLD is deposit threshold within rolling period
 
 - Then run this command (Development Issues)
