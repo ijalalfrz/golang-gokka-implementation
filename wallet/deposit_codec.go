@@ -23,7 +23,7 @@ func (jc *depositCodec) Encode(value interface{}) ([]byte, error) {
 	return proto.Marshal(v)
 }
 
-// Decodes a user from []byte to it's go representation.
+// Decodes a deposit from []byte to it's go representation.
 func (jc *depositCodec) Decode(data []byte) (interface{}, error) {
 	var (
 		deposit model.DepositWallet

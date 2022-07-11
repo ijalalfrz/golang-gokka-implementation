@@ -23,7 +23,7 @@ func (jc *walletCodec) Encode(value interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// Decodes a user from []byte to it's go representation.
+// Decodes a wallet from []byte to it's go representation.
 func (jc *walletCodec) Decode(data []byte) (interface{}, error) {
 	var (
 		deposit entity.Wallet

@@ -75,7 +75,7 @@ func main() {
 	defer tm.Close()
 	err = tm.EnsureStreamExists(depositTopic, 1)
 	if err != nil {
-		logger.Fatal("Error creating kafka topic %s: %v", depositTopic, err)
+		logger.Fatal(err)
 	}
 	// init codec for encode and decode
 	depositWalletCodec := wallet.NewDepositCodec()

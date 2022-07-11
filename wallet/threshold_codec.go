@@ -23,7 +23,7 @@ func (c *threshold) Encode(value interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// Decodes a user from []byte to it's go representation.
+// Decodes a threshold from []byte to it's go representation.
 func (c *threshold) Decode(data []byte) (interface{}, error) {
 	var (
 		threshold entity.Threshold

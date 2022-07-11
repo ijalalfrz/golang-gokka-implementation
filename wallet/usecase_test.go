@@ -294,7 +294,7 @@ func TestProcessThreshold_Success(t *testing.T) {
 	contextMock.AssertExpectations(t)
 }
 
-func TestProcessThreshold_Success_DataAlreadyExist(t *testing.T) {
+func TestProcessThreshold_Success_WithinRollingPeriod_BelowThreshold(t *testing.T) {
 	publisherMock := pubsubMock.Publisher{}
 	balanceTableMock := pubsubMock.ViewTable{}
 	thresholdTableMock := pubsubMock.ViewTable{}
@@ -329,5 +329,85 @@ func TestProcessThreshold_Success_DataAlreadyExist(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.HTTPStatusCode(), "should equal to http status ok/200")
 	data := resp.Data().(*entity.Threshold)
 	assert.Equal(t, data.TotalDepositWithinWindow, float64(2000))
+	assert.Equal(t, data.AboveThreshold, false)
+	contextMock.AssertExpectations(t)
+}
+
+func TestProcessThreshold_Success_AboveRollingPeriod(t *testing.T) {
+	publisherMock := pubsubMock.Publisher{}
+	balanceTableMock := pubsubMock.ViewTable{}
+	thresholdTableMock := pubsubMock.ViewTable{}
+	contextMock := pubsubMock.GokaContext{}
+	usecase := wallet.NewWalletUsecase(wallet.UsecaseProperty{
+		ServiceName:           "test-service",
+		Logger:                logrus.New(),
+		DepositTopicPublisher: &publisherMock,
+		RollingPeriod:         180,
+		Threshold:             10000,
+		BalanceViewTable:      &balanceTableMock,
+		ThresholdViewTable:    &thresholdTableMock,
+	})
+	payload := &model.DepositWallet{
+		WalletId: "1",
+		Amount:   1000,
+	}
+	threshold := &entity.Threshold{
+		WalletId:                 "1",
+		Deposit:                  1000,
+		TotalDepositWithinWindow: 1000,
+		StartWindowTime:          1657512600000,
+		CreatedTime:              1657512600000,
+		AboveThreshold:           false,
+	}
+	contextMock.On("Value").Return(threshold)
+	contextMock.On("SetValue", mock.Anything).Return(nil)
+	resp := usecase.ProcessThreshold(&contextMock, payload)
+	assert.Nil(t, resp.Error())
+	assert.Equal(t, response.StatOK, resp.Status(), "should equal to status ok")
+	assert.Equal(t, http.StatusOK, resp.HTTPStatusCode(), "should equal to http status ok/200")
+	data := resp.Data().(*entity.Threshold)
+	// rolling reset
+	assert.Equal(t, data.TotalDepositWithinWindow, float64(1000))
+	assert.Equal(t, data.AboveThreshold, false)
+	contextMock.AssertExpectations(t)
+}
+
+func TestProcessThreshold_Success_WithinRollingPeriod_AboveThreshold(t *testing.T) {
+	publisherMock := pubsubMock.Publisher{}
+	balanceTableMock := pubsubMock.ViewTable{}
+	thresholdTableMock := pubsubMock.ViewTable{}
+	contextMock := pubsubMock.GokaContext{}
+	usecase := wallet.NewWalletUsecase(wallet.UsecaseProperty{
+		ServiceName:           "test-service",
+		Logger:                logrus.New(),
+		DepositTopicPublisher: &publisherMock,
+		RollingPeriod:         180,
+		Threshold:             10000,
+		BalanceViewTable:      &balanceTableMock,
+		ThresholdViewTable:    &thresholdTableMock,
+	})
+	payload := &model.DepositWallet{
+		WalletId: "1",
+		Amount:   1000,
+	}
+	now := time.Now().UnixNano()
+	threshold := &entity.Threshold{
+		WalletId:                 "1",
+		Deposit:                  1000,
+		TotalDepositWithinWindow: 10000,
+		StartWindowTime:          now,
+		CreatedTime:              now,
+		AboveThreshold:           false,
+	}
+	contextMock.On("Value").Return(threshold)
+	contextMock.On("SetValue", mock.Anything).Return(nil)
+	resp := usecase.ProcessThreshold(&contextMock, payload)
+	assert.Nil(t, resp.Error())
+	assert.Equal(t, response.StatOK, resp.Status(), "should equal to status ok")
+	assert.Equal(t, http.StatusOK, resp.HTTPStatusCode(), "should equal to http status ok/200")
+	data := resp.Data().(*entity.Threshold)
+	// above threshold
+	assert.Equal(t, data.TotalDepositWithinWindow, float64(11000))
+	assert.Equal(t, data.AboveThreshold, true)
 	contextMock.AssertExpectations(t)
 }

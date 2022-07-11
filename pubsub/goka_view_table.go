@@ -50,7 +50,7 @@ func (gk *GokaViewTableAdapter) Get(key string) (data interface{}, err error) {
 	return
 }
 
-// Close will end goroutine for view
+// Close will cancel view context
 func (gk *GokaViewTableAdapter) Close() {
 	gk.cancel()
 	gk.logger.Info("[Goka] View Table is gracefully shut down.")
