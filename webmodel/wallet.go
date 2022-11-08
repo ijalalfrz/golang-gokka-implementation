@@ -6,6 +6,7 @@ type DepositWalletPayload struct {
 	Amount   float64 `json:"amount" validate:"required"`
 }
 
+// tes
 // DetailWalletResponse is response for get detail wallet
 type DetailWalletResponse struct {
 	WalletId       string  `json:"wallet_id"`
